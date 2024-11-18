@@ -7,15 +7,13 @@ const app = express();
 
 const RFID_TOPIC = "rfid/scan";
 const RESPONSE_TOPIC = "rfid/response";
-const SENSOR_TOPIC = "cho/sensor";
 
-const isFull = 1;
-const isEmpty = 0;
+let exists = 0;
 
 client.on('connect', () => {
-    client.subscribe([RFID_TOPIC, SENSOR_TOPIC], (err) => {
+    client.subscribe([RFID_TOPIC], (err) => {
         if (!err) {
-            console.log(`Subscribed to topics: ${RFID_TOPIC}, ${SENSOR_TOPIC}`);
+            console.log(`Subscribed to topic: ${RFID_TOPIC}`);
         } else {
             console.error('Subscription error');
         }
@@ -28,18 +26,15 @@ client.on('message', (topic, message) => {
     if (topic === RFID_TOPIC) {
         const cardnum = messageStr.replace(/\s+/g, '');
 
-        db.query('SELECT cardnum FROM hardware WHERE cardnum = ?', [cardnum], (err, results) => {
+        db.query('SELECT u.doorpermission FROM cardkey c JOIN user u ON c.usercode = u.usercode WHERE c.cardnum = ?', [cardnum], (err, result) => {
             if (err) {
-                /*
                 console.error('Database query error');
                 return;
-                */
-               results = '2CC7E371';
             }
 
-            const exists = results.length > 0 ? '1' : '0';
+            exists = result.length > 0 ? result[0].doorpermission : 0;
 
-            client.publish(RESPONSE_TOPIC, exists, (err) => {
+            client.publish(RESPONSE_TOPIC, exists.toString(), (err) => {
                 if (err) {
                     console.error('MQTT publish error', err);
                 } else {
@@ -48,15 +43,16 @@ client.on('message', (topic, message) => {
             });
         });
     }
+});
 
-    if (topic === SENSOR_TOPIC) {
-        if (message){
-            return isFull;
-        }
-        else{
-            return isEmpty;
-        }
+app.get('/permission', (req, res) => {
+    if (exists === 1) {
+        res.status(200).send('문이 열렸습니다.');
+    } else {
+        res.status(403).send('권한이 없습니다.');
     }
 });
 
-app.listen(3000);
+app.listen(3000, () => {
+    console.log('Server running on port 3000');
+});
