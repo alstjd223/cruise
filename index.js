@@ -1,7 +1,7 @@
 const express = require('express');
 const mqtt = require('mqtt');
 const client = mqtt.connect('mqtt://mqtt-dashboard.com');
-const db = require('./db');
+const { sequelize, User, Cardkey } = require('./db');
 
 const app = express();
 
@@ -20,19 +20,25 @@ client.on('connect', () => {
     });
 });
 
-client.on('message', (topic, message) => {
+client.on('message', async (topic, message) => {
     let messageStr = message.toString();
 
     if (topic === RFID_TOPIC) {
         const cardnum = messageStr.replace(/\s+/g, '');
 
-        db.query('SELECT u.doorpermission FROM cardkey c JOIN user u ON c.usercode = u.usercode WHERE c.cardnum = ?', [cardnum], (err, result) => {
-            if (err) {
-                console.error('Database query error');
-                return;
-            }
+        try {
+            const card = await Cardkey.findOne({
+                where: { cardnum },
+                include: User
+            });
 
-            exists = result.length > 0 ? result[0].doorpermission : 0;
+            console.log('Card:', card);
+
+            if (card && card.User) {
+                exists = card.User.doorpermission;
+            } else {
+                exists = 0;
+            }
 
             client.publish(RESPONSE_TOPIC, exists.toString(), (err) => {
                 if (err) {
@@ -41,9 +47,12 @@ client.on('message', (topic, message) => {
                     console.log(`Sent response: ${exists} for cardnum: ${cardnum}`);
                 }
             });
-        });
+        } catch (err) {
+            console.error('Database query error', err);
+        }
     }
 });
+
 
 app.get('/permission', (req, res) => {
     if (exists === 1) {
@@ -53,6 +62,11 @@ app.get('/permission', (req, res) => {
     }
 });
 
-app.listen(3000, () => {
-    console.log('Server running on port 3000');
+app.listen(4000, () => {
+    console.log('Server running on port 4000');
+});
+
+
+client.on('error', (err) => {
+    console.error('MQTT connection error:', err);
 });
