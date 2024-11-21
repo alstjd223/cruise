@@ -56,8 +56,18 @@ client.on('message', async (topic, message) => {
 
 app.get('/permission', (req, res) => {
     if (exists === 1) {
+        client.publish(RESPONSE_TOPIC, '1', (err) => {
+            if (err) {
+                console.error('MQTT publish error', err);
+            }
+        });
         res.status(200).send('문이 열렸습니다.');
     } else {
+        client.publish(RESPONSE_TOPIC, '0', (err) => {
+            if (err) {
+                console.error('MQTT publish error', err);
+            }
+        });
         res.status(403).send('권한이 없습니다.');
     }
 });
