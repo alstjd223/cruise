@@ -1,6 +1,6 @@
 const express = require('express');
 const mqtt = require('mqtt');
-const client = mqtt.connect('mqtt://mqtt-dashboard.com');
+const client = mqtt.connect('mqtt://broker.emqx.io:1883');
 const { sequelize, User, Cardkey } = require('./db');
 
 const app = express();
