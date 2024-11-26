@@ -24,7 +24,9 @@ client.on('message', async (topic, message) => {
     let messageStr = message.toString();
 
     if (topic === RFID_TOPIC) {
-        const cardnum = messageStr.replace(/\s+/g, '');
+        let cardnum = messageStr.replace(/\s+/g, '');
+        const doorid = cardnum[0];
+        cardnum = cardnum.slice(1);
 
         try {
             const card = await Cardkey.findOne({
