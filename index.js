@@ -33,33 +33,28 @@ client.on('message', async (topic, message) => {
         cardnum = cardnum.slice(1);
 
         try {
+            //아래는 디비에서 카드키 찾는 로직
             const card = await Cardkey.findOne({
                 where: {
-                    cardnum
+                    cardnum 
                 },
                 include: User
             });
 
             console.log('Card:', card);
-
+            //아래는 카드키 찾은걸 바탕으로 권한 찾는 로직
             if (card && card.User) {
                 exists = card.User.doorpermission;
             } else {
                 exists = 0;
             }
-
+            //아래는 권한 여부 판단
             if (exists === 1) {
                 client.publish(RESPONSE_TOPIC, '1', (err) => {
                     if (err) {
                         console.error('MQTT publish error', err);
                     }
-                });
-
-                const card = await Cardkey.findOne({
-                    where: {
-                        cardnum
-                    }
-                });
+                }); //권한이 1이면 해당 토픽으로 1이라는 데이터를 쏴줌
 
                 if (card) {
                     const usercode = card.usercode;
@@ -69,7 +64,7 @@ client.on('message', async (topic, message) => {
                         where: {
                             usercode
                         }
-                    });
+                    }); //카드 권한 삭제
                 } else {
                     console.log(`No card found for cardnum: ${cardnum}`);
                 }
@@ -78,7 +73,7 @@ client.on('message', async (topic, message) => {
                     if (err) {
                         console.error('MQTT publish error', err);
                     }
-                });
+                }); // 권한이 없으면 0을 보냄
             }
         } catch (err) {
             console.error('Database query error', err);
